@@ -1,2 +1,2 @@
 # root-parent
-Root pom for the DellEMC Symphony Framework
+Root pom for the DellEMC Framework
