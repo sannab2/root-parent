@@ -3,7 +3,7 @@
 
     <groupId>com.dell.cpsd</groupId>
     <artifactId>root-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.2.3</version>
     <packaging>pom</packaging>
 
     <name>Parent Project</name>
@@ -44,6 +44,11 @@
         <use-docker-config-file>false</use-docker-config-file>
         <dockerImage.service>${project.artifactId}</dockerImage.service>
 
+        <!-- Maven Central Deploy properties -->
+        <skipSigning>true</skipSigning>
+        <skipJavadoc>true</skipJavadoc>
+        <skipJavasource>true</skipJavasource>
+
         <!-- Plugin Versions --> 
         <exec-maven-plugin-version>1.4.0</exec-maven-plugin-version>
         <maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
@@ -53,42 +58,131 @@
         <maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>	 
     </properties>
 
+    <repositories>
+        <repository>
+            <name>bintray-internal</name>
+            <id>bintray-dell-emc-cpsd-internal</id>
+            <url>http://dl.bintray.com/dell-emc-cpsd/internal</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <name>bintray-github</name>
+            <id>bintray-dell-emc-cpsd-git-hub</id>
+            <url>http://dl.bintray.com/dell-emc-cpsd/git-hub</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <name>bintray-plugins</name>
+            <id>bintray-dell-emc-cpsd-internal-plugin</id>
+            <url>http://dl.bintray.com/dell-emc-cpsd/internal</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>2.2.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <skip>${skipJavasource}</skip>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.9.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <skip>${skipJavadoc}</skip>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>1.6.7</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <serverId>ossrh</serverId>
+                        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.5</version>
+                    <executions>
+                        <execution>
+                            <id>sign-artifacts</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <skip>${skipSigning}</skip>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>com.spotify</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
                     <version>${docker-maven-plugin.version}</version>
-                        <!--
-                            https://github.com/spotify/docker-maven-plugin
-                            Docker plugin is configured generically here in the root parent but
-                            application POMs still need to reference the plugin.
+<!-- https://github.com/spotify/docker-maven-plugin
+ Docker plugin is configured generically here in the root parent but
+ application POMs still need to reference the plugin.
 
-                            The configuration of this plugin binds to the following maven phases.
+ The configuration of this plugin binds to the following maven phases.
 
-                            Package
-                                By default a docker image will be built in the package phase when the skipDocker property is set to false.
+ Package
+    By default a docker image will be built in the package phase when the skipDocker property is set to false.
 
-                            Deploy
-                                Docker Tag
-                                If the docker.registry property is set the previously built docker image will be tagged with the following
-                                    ${docker.registry}/${dockerImage.org}-${project.artifactId}:latest
-                                    ${docker.registry}/${dockerImage.org}-${project.artifactId}:${dockerImage.tag}
-                                Docker Push
-                                    Once the images are tagged they both will be pushed to the given docker.registry.
-                            Example Launch
-                                mvn clean deploy -DskipDocker=false -Ddocker.registry=docker-dev-local.art.local -DdockerImage.org=cpsd-ess
+ Deploy
+    Docker Tag
+    If the docker.registry property is set the previously built docker image will be tagged with the following
+        ${docker.registry}/${dockerImage.org}-${project.artifactId}:latest
+        ${docker.registry}/${dockerImage.org}-${project.artifactId}:${dockerImage.tag}
+    Docker Push
+        Once the images are tagged they both will be pushed to the given docker.registry.
+ Example Launch
+        mvn clean deploy -DskipDocker=false -Ddocker.registry=docker-dev-local.art.local -DdockerImage.org=cpsd-ess
 
-                            You can augment configuration specific to your application's Docker image
-                            by including a <configuration> section, such as
+ You can augment configuration specific to your application's Docker image
+ by including a <configuration> section, such as
 
-                            <configuration>
-                                <env>
-                                    <SPRING_CONFIG_URI>http://config-server:8888/config-server/</SPRING_CONFIG_URI>
-                                </env>
-                            </configuration>
-                        -->
+ <configuration>
+     <env>
+         <SPRING_CONFIG_URI>http://config-server:8888/config-server/</SPRING_CONFIG_URI>
+     </env>
+</configuration> -->
                     <executions>
                         <execution>
                             <id>build-image</id>
@@ -149,10 +243,8 @@
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco-maven-plugin.version}</version>
                     <executions>
-                        <!--
-                            Prepares the property pointing to the JaCoCo runtime agent which
-                            is passed as VM argument when Maven the Surefire plugin is executed.
-                         -->
+<!-- Prepares the property pointing to the JaCoCo runtime agent which
+ is passed as VM argument when Maven the Surefire plugin is executed. -->
                         <execution>
                             <id>pre-unit-test</id>
                             <goals>
@@ -165,10 +257,8 @@
                                 <propertyName>surefireArgLine</propertyName>
                             </configuration>
                         </execution>
-                        <!--
-                            Ensures that the code coverage report for unit tests is created after
-                            unit tests have been run.
-                        -->
+<!-- Ensures that the code coverage report for unit tests is created after
+ unit tests have been run. -->
                         <execution>
                             <id>post-unit-test</id>
                             <phase>test</phase>
@@ -182,10 +272,8 @@
                                 <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
                             </configuration>
                         </execution>
-                        <!--
-                            Prepares the property pointing to the JaCoCo runtime agent which
-                            is passed as VM argument when Maven the Failsafe plugin is executed.
-                        -->
+<!-- Prepares the property pointing to the JaCoCo runtime agent which
+ is passed as VM argument when Maven the Failsafe plugin is executed. -->
                         <execution>
                             <id>pre-integration-test</id>
                             <phase>pre-integration-test</phase>
@@ -199,10 +287,8 @@
                                 <propertyName>failsafeArgLine</propertyName>
                             </configuration>
                         </execution>
-                        <!--
-                            Ensures that the code coverage report for integration tests after
-                            integration tests have been run.
-                        -->
+<!-- Ensures that the code coverage report for integration tests after
+ integration tests have been run. -->
                         <execution>
                             <id>post-integration-test</id>
                             <phase>post-integration-test</phase>
@@ -250,9 +336,8 @@
                         </execution>
                     </executions>
                 </plugin>
-                <!-- All of the antrun executions below are disabled by default. You must define the property associated with the "if".
-                     The definition of the antrun must be placed after the docker plugin as the executions make use of docker images.
-                 -->
+<!-- All of the antrun executions below are disabled by default. You must define the property associated with the "if".
+ The definition of the antrun must be placed after the docker plugin as the executions make use of docker images. -->
                 <plugin>
                     <artifactId>maven-antrun-plugin</artifactId>
                     <version>${maven-antrun-plugin.version}</version>
@@ -338,6 +423,16 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+	<plugins>
+	    <plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-gpg-plugin</artifactId>
+	    </plugin>
+	    <plugin>
+		<groupId>org.sonatype.plugins</groupId>
+		<artifactId>nexus-staging-maven-plugin</artifactId>
+	    </plugin>
+	</plugins>
     </build>
 
     <!-- Unless the docker.registry value is set docker images will not be tagged or pushed. -->
@@ -352,6 +447,20 @@
             <properties>
                 <skipDockerTag>true</skipDockerTag>
                 <skipDockerPush>true</skipDockerPush>
+            </properties>
+        </profile>
+<!-- If the gpg.passphrase is passed on the command line enable signing.
+ Signing can also be enabled by passing -DskipSigning=true.
+ In the second case you will be prompted for the passphrase during the build. -->
+        <profile>
+            <id>sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>gpg.passphrase</name>
+                </property>
+            </activation>
+            <properties>
+                <skipSigning>false</skipSigning>
             </properties>
         </profile>
     </profiles>
