@@ -1,10 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--Copyright &copy; 2017 Dell Inc. or its subsidiaries. All Rights Reserved.-->
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.dell.cpsd</groupId>
     <artifactId>root-parent</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
     <packaging>pom</packaging>
 
     <name>Parent Project</name>
@@ -58,6 +57,14 @@
         <maven-failsafe-plugin.version>2.15</maven-failsafe-plugin.version> 
         <maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>	 
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <name>bintray</name>
+            <id>bintray-dell-emc-cpsd-git-hub</id>
+            <url>http://api.bintray.com/maven/dell-emc-cpsd/git-hub/initial-package</url>
+        </repository>
+    </distributionManagement>
 
     <repositories>
         <repository>
@@ -123,17 +130,6 @@
                     </executions>
                     <configuration>
                         <skip>${skipJavadoc}</skip>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.sonatype.plugins</groupId>
-                    <artifactId>nexus-staging-maven-plugin</artifactId>
-                    <version>1.6.7</version>
-                    <extensions>true</extensions>
-                    <configuration>
-                        <serverId>ossrh</serverId>
-                        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -376,28 +372,6 @@
                                 </target>
                             </configuration>
                         </execution>
-                        <execution>
-                            <id>Upload Docker Tar File</id>
-                            <phase>deploy</phase>
-                            <goals>
-                                <goal>run</goal>
-                            </goals>
-                            <configuration>
-                                <target name="upload_docker_tar_file" if="uploadDockerTar">
-                                    <echo>Uploading compressed docker tar file ${dockerImage.org}-${dockerImage.service}.tar.gz</echo>
-                                    <echo>to the docker tar repository ${docker.tar.repository}</echo>
-                                    <exec executable="curl">
-                                        <arg value="-i"/>
-                                        <arg value="-v"/>
-                                        <arg value="-X"/>
-                                        <arg value="PUT"/>
-                                        <arg value="--upload-file"/>
-                                        <arg value="${dockerImage.org}-${project.artifactId}.tar.gz"/>
-                                        <arg value="${docker.tar.repository}/${dockerImage.org}-${project.artifactId}.tar.gz"/>
-                                   </exec>
-                                </target>
-                            </configuration>
-                        </execution>
                         <!-- This execution must come last as it deletes images used in previous steps. -->
                         <execution>
                             <id>delete_docker_images</id>
@@ -428,10 +402,6 @@
 	    <plugin>
 		<groupId>org.apache.maven.plugins</groupId>
 		<artifactId>maven-gpg-plugin</artifactId>
-	    </plugin>
-	    <plugin>
-		<groupId>org.sonatype.plugins</groupId>
-		<artifactId>nexus-staging-maven-plugin</artifactId>
 	    </plugin>
 	</plugins>
     </build>
